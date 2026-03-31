@@ -1,18 +1,12 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { LogIn, LogOut, User, Lock, CheckCircle2, AlertTriangle, Shield } from 'lucide-react';
-import { verifyCredentials } from '@/lib/twitter-api';
+import { LogOut, User, CheckCircle2, AlertTriangle, Shield, Wifi, WifiOff } from 'lucide-react';
 
 export default function HomePage() {
   const { stats, resetStats, logs, addLog, clearLogs, twitterCredentials, loginTwitter, logoutTwitter, settings } = useStore();
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [logFilter, setLogFilter] = useState<'all' | 'error'>('all');
-  const [connectedUser, setConnectedUser] = useState<{ name: string; username: string; profileImage?: string } | null>(
-    twitterCredentials.isLoggedIn ? { name: '', username: twitterCredentials.username } : null
-  );
 
   const statItems = [
     { label: 'BEĞENİ', value: stats.likes, emoji: '❤️' },
@@ -26,32 +20,17 @@ export default function HomePage() {
     addLog('İstatistikler başarıyla sıfırlandı.', 'success');
   };
 
-  const handleConnect = async () => {
-    setIsLoggingIn(true);
-    addLog('Twitter API bağlantısı doğrulanıyor...', 'info');
-
-    const result = await verifyCredentials();
-
-    if (result.success && result.data) {
-      const user = result.data.data;
-      loginTwitter(user.username, '');
-      setConnectedUser({
-        name: user.name,
-        username: user.username,
-        profileImage: user.profile_image_url,
-      });
-      addLog(`✅ @${user.username} hesabı başarıyla bağlandı. (${user.public_metrics?.followers_count || 0} takipçi)`, 'success');
-    } else {
-      addLog(`❌ Bağlantı hatası: ${result.error || 'Bilinmeyen hata'}`, 'error');
+  const handleManualLogin = () => {
+    const username = prompt('Twitter kullanıcı adınızı girin (@olmadan):');
+    if (username && username.trim()) {
+      loginTwitter(username.trim(), '');
+      addLog(`✅ @${username.trim()} hesabı bağlandı.`, 'success');
     }
-
-    setIsLoggingIn(false);
   };
 
   const handleDisconnect = () => {
     const username = twitterCredentials.username;
     logoutTwitter();
-    setConnectedUser(null);
     addLog(`@${username} bağlantısı kesildi.`, 'info');
   };
 
@@ -60,30 +39,22 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Twitter API Connection */}
       <div className="bg-card border border-border rounded-lg p-5 mb-6">
         <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-          <Shield className="w-4 h-4" /> Twitter API Bağlantısı
+          <Shield className="w-4 h-4" /> Twitter Bağlantısı
         </div>
-
-        {twitterCredentials.isLoggedIn && connectedUser ? (
+        {twitterCredentials.isLoggedIn ? (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
-                {connectedUser.profileImage ? (
-                  <img src={connectedUser.profileImage} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-5 h-5 text-primary" />
-                )}
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <User className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-foreground font-semibold text-sm">
-                    {connectedUser.name || `@${connectedUser.username}`}
-                  </span>
-                  <CheckCircle2 className="w-4 h-4 text-success" />
+                  <span className="text-foreground font-semibold text-sm">@{twitterCredentials.username}</span>
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </div>
-                <span className="text-xs text-success">API bağlantısı aktif — Otomasyon hazır</span>
+                <span className="text-xs text-green-500">Bağlantı aktif — Otomasyon hazır</span>
               </div>
             </div>
             <Button variant="outline" size="sm" className="border-destructive/30 text-destructive hover:bg-destructive/10" onClick={handleDisconnect}>
@@ -92,21 +63,20 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground mb-3">
-              Twitter API anahtarlarınız backend'de güvenli şekilde saklanıyor. Bağlantıyı doğrulamak için aşağıdaki butona tıklayın.
+            <div className="flex items-center gap-2 text-yellow-500 text-sm">
+              <WifiOff className="w-4 h-4" />
+              <span>Bağlantı yok</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Twitter kullanıcı adınızı girerek oturumu başlatın.
             </p>
-            <Button className="w-full" onClick={handleConnect} disabled={isLoggingIn}>
-              {isLoggingIn ? (
-                <><span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />Doğrulanıyor...</>
-              ) : (
-                <><LogIn className="w-4 h-4 mr-1.5" />API Bağlantısını Doğrula</>
-              )}
+            <Button className="w-full" onClick={handleManualLogin}>
+              <Wifi className="w-4 h-4 mr-1.5" /> Hesabı Bağla
             </Button>
           </div>
         )}
       </div>
 
-      {/* Rate Limit Indicator */}
       <div className="bg-card border border-border rounded-lg p-4 mb-6">
         <div className="flex items-center justify-between mb-2">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">⏱️ Saatlik Oran Limiti</div>
@@ -116,25 +86,17 @@ export default function HomePage() {
           <div
             className={cn(
               'h-full rounded-full transition-all',
-              ((stats.likes + stats.rts + stats.follows) / settings.rateLimitPerHour) > 0.8
-                ? 'bg-destructive'
-                : ((stats.likes + stats.rts + stats.follows) / settings.rateLimitPerHour) > 0.5
-                  ? 'bg-warning'
-                  : 'bg-primary'
+              ((stats.likes + stats.rts + stats.follows) / settings.rateLimitPerHour) > 0.8 ? 'bg-destructive' : 'bg-primary'
             )}
             style={{ width: `${Math.min(100, ((stats.likes + stats.rts + stats.follows) / settings.rateLimitPerHour) * 100)}%` }}
           />
         </div>
-        {((stats.likes + stats.rts + stats.follows) / settings.rateLimitPerHour) > 0.8 && (
-          <p className="text-[10px] text-destructive mt-1.5">⚠️ Oran limitine yaklaşıyorsunuz! Hesap güvenliği için yavaşlayın.</p>
-        )}
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
         {statItems.map((item) => (
           <div key={item.label} className="bg-card border border-border rounded-lg p-4 lg:p-5">
-            <div className="text-[10px] lg:text-xs text-muted-foreground font-medium mb-1.5 lg:mb-2">{item.emoji} {item.label}</div>
+            <div className="text-[10px] lg:text-xs text-muted-foreground font-medium mb-1.5">{item.emoji} {item.label}</div>
             <div className="text-2xl lg:text-3xl font-bold text-foreground">{item.value}</div>
           </div>
         ))}
@@ -146,37 +108,28 @@ export default function HomePage() {
         </Button>
       </div>
 
-      {/* Logs */}
       <div className="bg-card border border-border rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            📜 Son İşlemler (Loglar)
-          </div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">📜 Son İşlemler (Loglar)</div>
           <div className="flex items-center gap-2">
-            <Button variant={logFilter === 'all' ? 'secondary' : 'ghost'} size="sm" className="text-xs h-7" onClick={() => setLogFilter('all')}>
-              Tümü
-            </Button>
+            <Button variant={logFilter === 'all' ? 'secondary' : 'ghost'} size="sm" className="text-xs h-7" onClick={() => setLogFilter('all')}>Tümü</Button>
             <Button variant={logFilter === 'error' ? 'secondary' : 'ghost'} size="sm" className="text-xs h-7" onClick={() => setLogFilter('error')}>
               <AlertTriangle className="w-3 h-3 mr-1 text-destructive" />
               Hatalar {errorCount > 0 && `(${errorCount})`}
             </Button>
-            <Button variant="ghost" size="sm" className="text-xs h-7 text-muted-foreground" onClick={clearLogs}>
-              Temizle
-            </Button>
+            <Button variant="ghost" size="sm" className="text-xs h-7 text-muted-foreground" onClick={clearLogs}>Temizle</Button>
           </div>
         </div>
-        <div className="bg-background border border-border rounded-lg h-[300px] lg:h-[350px] overflow-y-auto p-3 lg:p-4 font-mono text-[11px] lg:text-xs">
+        <div className="bg-background border border-border rounded-lg h-[300px] lg:h-[350px] overflow-y-auto p-3 font-mono text-[11px] lg:text-xs">
           {filteredLogs.length === 0 ? (
-            <div className="text-muted-foreground/50 text-center py-8">
-              {logFilter === 'error' ? 'Hata kaydı yok.' : 'Log kaydı yok.'}
-            </div>
+            <div className="text-muted-foreground/50 text-center py-8">{logFilter === 'error' ? 'Hata kaydı yok.' : 'Log kaydı yok.'}</div>
           ) : (
             filteredLogs.map((log) => (
               <div key={log.id} className="flex gap-2 py-1 border-b border-card">
-                <span className="text-muted-foreground/50 min-w-[50px] lg:min-w-[60px] flex-shrink-0">{log.time}</span>
+                <span className="text-muted-foreground/50 min-w-[50px] flex-shrink-0">{log.time}</span>
                 <span className={cn(
                   log.type === 'info' && 'text-primary',
-                  log.type === 'success' && 'text-success',
+                  log.type === 'success' && 'text-green-500',
                   log.type === 'error' && 'text-destructive',
                   log.type === 'default' && 'text-muted-foreground',
                 )}>
