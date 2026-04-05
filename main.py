@@ -58,6 +58,7 @@ async def login_account(data: AccountData):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/increase-views")
+print(f"Gelen tweet_id: {tweet_id}, Kullanıcı: {username}")
 async def increase_views(tweet_id: str, username: str):
     """
     Belirtilen tweetin görüntülenmesini tetikler.
